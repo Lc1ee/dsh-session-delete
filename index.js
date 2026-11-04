@@ -117,7 +117,28 @@ async function deleteOne(deps, id, report) {
     report.failed.push({ id, code: 'bad-path' });
     return;
   }
-  /* 1) 先删文件：受限沙箱（root=该项目目录）。失败则无任何状态变化。 */
+  /* 1) 先归档隐藏：archiveSession 会校验 sessionKnown（要读 stored header），
+     日志一删就再也归档不了，所以必须在删文件之前做。失败则文件原封不动。 */
+  try {
+    await deps.registry.archiveSession(id);
+  } catch (e) {
+    const unknown = e !== null && typeof e === 'object' && e.name === 'WorkspaceUnknownSessionError';
+    report.failed.push({
+      id,
+      code: unknown ? 'unknown-session' : 'archive-failed',
+      detail: textOf(e && e.message),
+    });
+    return;
+  }
+  /** 删文件失败时的回滚：撤销归档，让这一行回到原处可重试。 */
+  const unarchive = async () => {
+    try {
+      await deps.registry.unarchiveSession(id);
+    } catch {
+      /* 回滚失败只影响显示；行会留在“已归档”里 */
+    }
+  };
+  /* 2) 删文件：受限沙箱（root=该项目目录）。 */
   let res;
   try {
     const spec = await deps.shell.resolve({
@@ -131,20 +152,17 @@ async function deleteOne(deps, id, report) {
       : await deps.shell.run(spec);
     res = typeof proc.result === 'function' ? await proc.result() : proc;
   } catch (e) {
+    await unarchive();
     report.failed.push({ id, code: 'run-error', detail: textOf(e && e.message) });
     return;
   }
   const denied = res.sandbox !== undefined && res.sandbox.denied === true;
   if (res.exitCode !== 0) {
+    await unarchive();
     report.failed.push({ id, code: denied ? 'sandbox-denied' : 'rm-failed', detail: textOf(res.stderr) });
     return;
   }
-  /* 2) 文件已删，做簿记：归档隐藏 + 工作区账目 detach。失败仅影响显示。 */
-  try {
-    await deps.registry.archiveSession(id);
-  } catch {
-    /* 已归档或竞态：忽略 */
-  }
+  /* 3) 文件已删，再摘工作区账目（纯账目操作，不校验日志是否存在）。 */
   try {
     for (const w of deps.registry.list()) {
       if (w.sessionIds.includes(id)) {
