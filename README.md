@@ -61,7 +61,7 @@ pnpm add dsh-session-delete --registry https://registry.npmjs.org
 
 ### 兼容性
 
-- DSH `0.1.0-rc.6`（依赖 `webServer` / `shell` / `sessionPersistence` / `workspaceRegistry` / `sessions` 服务）
+- DSH `0.2.1`（已在 0.2.1-rc.2 验证；`sessionPersistence.list()` 的快照形态与 `shell.execute` 均已适配）与 `0.1.0-rc.6`（依赖 `webServer` / `shell` / `sessionPersistence` / `workspaceRegistry` / `sessions` 服务）
 - Linux / Windows（按会话路径分隔符自动分派删除命令）
 
 ## English

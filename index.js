@@ -88,7 +88,11 @@ async function deleteOne(deps, id, report) {
   let header;
   try {
     const headers = await deps.persistence.list();
-    header = Array.isArray(headers) ? headers.find((h) => h && h.id === id) : undefined;
+    /* 0.2.x 的 list() 返回 { header, revision, ... } 快照；0.1.x 直接返回 header 数组。 */
+    const found = Array.isArray(headers)
+      ? headers.find((h) => h && ((h.header && h.header.id === id) || h.id === id))
+      : undefined;
+    header = found === undefined ? undefined : (found.header !== undefined ? found.header : found);
   } catch (e) {
     report.failed.push({ id, code: 'list-failed', detail: textOf(e && e.message) });
     return;
@@ -121,7 +125,11 @@ async function deleteOne(deps, id, report) {
       timeoutMs: 30_000,
       sandboxPolicy: { mode: 'workspace-write', workspaceRoot: parent },
     });
-    res = await deps.shell.run(spec);
+    /* 0.2.x：execute(spec) 返回进程句柄，再等 result()；0.1.x 的 shell.run 已移除。 */
+    const proc = typeof deps.shell.execute === 'function'
+      ? await deps.shell.execute(spec)
+      : await deps.shell.run(spec);
+    res = typeof proc.result === 'function' ? await proc.result() : proc;
   } catch (e) {
     report.failed.push({ id, code: 'run-error', detail: textOf(e && e.message) });
     return;
