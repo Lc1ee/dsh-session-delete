@@ -190,6 +190,34 @@ window.__ModuleLoader__.load({
 				return null;
 			}
 
+			/**
+			 * 判定这个菜单属于哪一类行。
+			 * rc.5 起会话行菜单把 slot 结果作为 children 传入（没有 items 数组），
+			 * 工作区行菜单仍然用 items —— 所以两种形态都要认。
+			 * @returns "session" | "workspace" | null
+			 */
+			function menuKind(menuEl) {
+				var ids = menuItemsIds(menuEl);
+				if (ids !== null) {
+					if (ids.indexOf("archive") !== -1 && ids.indexOf("fork") !== -1) return "session";
+					if (ids.indexOf("delete") !== -1 && ids.indexOf("archive") === -1 && ids.indexOf("fork") === -1) return "workspace";
+					return null;
+				}
+				/* 没有 items：看 fiber 上的 anchor/children，那是行内 "…" 触发的菜单。 */
+				var f = fiberOf(menuEl);
+				var guard = 0;
+				while (f !== null && f !== undefined && guard++ < 30) {
+					var p = f.memoizedProps;
+					if (p !== null && p !== undefined && typeof p === "object"
+						&& p.children !== null && p.children !== undefined
+						&& typeof p.onClose === "function") {
+						return "session";
+					}
+					f = f.return;
+				}
+				return null;
+			}
+
 			function makeIcon(d) {
 				var NS = "http://www.w3.org/2000/svg";
 				var svg = document.createElementNS(NS, "svg");
@@ -248,11 +276,10 @@ window.__ModuleLoader__.load({
 
 			function tryInject(menuEl) {
 				if (menuEl.getAttribute("data-sesdel") !== null) return;
-				var ids = menuItemsIds(menuEl);
-				if (ids === null) return;
-				var isSession = ids.indexOf("archive") !== -1 && ids.indexOf("fork") !== -1;
-				var isWorkspace = ids.indexOf("delete") !== -1 && ids.indexOf("archive") === -1 && ids.indexOf("fork") === -1;
-				if (!isSession && !isWorkspace) return;
+				var kind = menuKind(menuEl);
+				if (kind === null) return;
+				var isSession = kind === "session";
+				var isWorkspace = kind === "workspace";
 				var row = pendingRow !== null && Date.now() - pendingRow.ts < 2000 ? pendingRow : null;
 				if (row === null) return;
 				if (isSession && row.kind !== "session") return;

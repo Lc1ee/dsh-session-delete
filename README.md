@@ -85,7 +85,8 @@ This repository is a fork of [vtxf/dsh-session-delete](https://github.com/vtxf/d
 
 - 适配 DSH `0.2.x`：`sessionPersistence.list()` 改为快照形态（`{ header, revision, … }`）后仍能定位会话；`shell.run()` 移除后改用 `shell.execute(spec)` + `result()`，并保留旧版回退
 - 修正删除顺序为「归档 → 删文件 → 摘工作区账目」：`archiveSession` 会校验 `sessionKnown`，原先"先删文件后归档"必然失败，导至会话掉进「未分组」且无法归档；删文件失败时自动 `unarchive` 回滚
-- 版本号升至 `0.1.1`，README 补充兼容性说明
+- 适配 rc.5 的侧栏结构：行标识改用 `data-row-key`（`session:<id>` / `workspace:<id>`），并识别「会话行菜单改用 `children` 传 slot 项、不再有 `items` 数组」这一变化，否则单会话删除不会出现在菜单里
+- 版本号升至 `0.1.3`
 
 ## License
 
