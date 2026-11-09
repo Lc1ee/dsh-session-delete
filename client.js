@@ -130,13 +130,40 @@ window.__ModuleLoader__.load({
 				return null;
 			}
 
+			/** 行内可见文本，作为确认对话框里的标题/工作区名。 */
+			function rowLabel(rowEl) {
+				try {
+					var text = (rowEl.textContent || "").replace(/\s+/g, " ").trim();
+					return text.length > 80 ? text.slice(0, 80) : text;
+				} catch (e) {
+					return "";
+				}
+			}
+
 			function rowTarget(rowEl) {
+				/* rc.5+：行元素带稳定的 data-row-key（`session:<id>` / `workspace:<workspaceId>`）。
+				   旧版靠 fiber props（node.onArchive 等）判定，但 rc.5 把菜单项改成 slot 注入后
+				   这些 prop 不再传给行组件，fiber 路径会失效——所以优先读属性。 */
+				try {
+					var key = rowEl.getAttribute("data-row-key");
+					if (typeof key === "string" && key.length > 0) {
+						if (key.indexOf("session:") === 0) {
+							return { kind: "session", id: key.slice(8), title: rowLabel(rowEl) };
+						}
+						if (key.indexOf("workspace:") === 0) {
+							var wsId = key.slice(10);
+							/* 未分组桶的 key 是空的，不对应真实工作区。 */
+							if (wsId === "") return null;
+							return { kind: "workspace", workspaceId: wsId, label: rowLabel(rowEl) };
+						}
+					}
+				} catch (e) {}
 				var f = fiberOf(rowEl);
 				var guard = 0;
 				while (f !== null && f !== undefined && guard++ < 40) {
 					var p = f.memoizedProps;
 					if (p !== null && p !== undefined && typeof p === "object") {
-						if (p.node !== null && p.node !== undefined && typeof p.node.id === "string" && typeof p.onArchive === "function") {
+						if (p.node !== null && p.node !== undefined && typeof p.node.id === "string" && (typeof p.onArchive === "function" || typeof p.renderSlot === "function")) {
 							return { kind: "session", id: p.node.id, title: String(p.node.title == null ? "" : p.node.title) };
 						}
 						if (p.group !== null && p.group !== undefined && typeof p.group.key === "string" && typeof p.onCreate === "function" && p.actions !== undefined && p.group.workspaceId !== undefined) {
