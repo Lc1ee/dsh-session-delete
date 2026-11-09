@@ -21,7 +21,8 @@
     "index.js",
     "client.js",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "keywords": [
     "dsh",
@@ -31,8 +32,18 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vtxf/dsh-session-delete.git"
+    "url": "git+https://github.com/Lc1ee/dsh-session-delete.git"
   },
-  "author": "vtxf",
+  "homepage": "https://github.com/Lc1ee/dsh-session-delete#readme",
+  "bugs": {
+    "url": "https://github.com/Lc1ee/dsh-session-delete/issues"
+  },
+  "author": "vtxf (https://github.com/vtxf/dsh-session-delete)",
+  "contributors": [
+    {
+      "name": "Lc1ee",
+      "url": "https://github.com/Lc1ee"
+    }
+  ],
   "license": "MIT"
 }
